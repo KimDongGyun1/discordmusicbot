@@ -1,3 +1,4 @@
+import asyncio
 import discord
 import yt_dlp
 import discord.opus
@@ -109,10 +110,16 @@ async def play(ctx, url):
 
             # 재생 중임을 나타내는 메시지 전송
             await ctx.send(f"노래요정이 `{title}`을(를) 재생 중이에요!")
+
+            # 노래가 끝나면 퇴장
+            while vc.is_playing():
+                await asyncio.sleep(1)
+            await vc.disconnect()
         else:
             await ctx.send("오디오 URL을 찾을 수 없어요!")
     else:
         await ctx.send("음성 채널에 들어가 있지 않아요!")
+
 
 
 @bot.command(aliases=['일시정지'])
