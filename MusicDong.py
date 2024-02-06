@@ -4,7 +4,7 @@ import discord.opus
 import os
 from dotenv import load_dotenv
 
-# .env 파일로부터 환경변수 로드
+# .env 파일로부터 환경 변수 로드
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
