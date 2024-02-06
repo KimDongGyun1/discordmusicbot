@@ -11,6 +11,9 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 
 from discord.ext import commands
 
+# 큐 생성
+queue = asyncio.Queue()
+
 # Opus 로딩 상세 출력
 print("Loading Opus...")
 try:
@@ -100,27 +103,42 @@ async def play(ctx, url):
                 'options': '-vn -loglevel debug'  # 로그 수준을 debug로 설정
             }
 
-            # 오디오 재생
-            vc.play(discord.FFmpegPCMAudio(audio_url, **ffmpeg_options), after=lambda e: print('done', e))
+            # 현재 재생 중인 노래가 없으면 바로 재생
+            if not vc.is_playing():
+                # 오디오 재생
+                vc.play(discord.FFmpegPCMAudio(audio_url, **ffmpeg_options), after=lambda e: print('done', e))
 
-            # YouTube 제목 가져오기
-            with yt_dlp.YoutubeDL() as ydl:
-                info = ydl.extract_info(url, download=False)
-                title = info.get('title', 'Unknown Title')
+                # YouTube 제목 가져오기
+                with yt_dlp.YoutubeDL() as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    title = info.get('title', 'Unknown Title')
 
-            # 재생 중임을 나타내는 메시지 전송
-            await ctx.send(f"노래요정이 `{title}`을(를) 재생 중이에요!")
+                # 재생 중임을 나타내는 메시지 전송
+                await ctx.send(f"노래요정이 `{title}`을(를) 재생 중이에요!")
 
-            # 노래가 끝나면 퇴장
-            while vc.is_playing():
-                await asyncio.sleep(1)
-            await vc.disconnect()
+                # 노래가 끝나면 다음 노래를 재생
+                while vc.is_playing():
+                    await asyncio.sleep(1)
+                await play_next(ctx)
+
+            else:
+                # 현재 재생 중이던 노래가 있으면 큐에 추가
+                await queue.put(url)
+                await ctx.send("다음 노래를 예약~!")
         else:
             await ctx.send("오디오 URL을 찾을 수 없어요!")
     else:
         await ctx.send("음성 채널에 들어가 있지 않아요!")
 
-
+async def play_next(ctx):
+    # 큐에서 다음 노래 URL 가져오기
+    if not queue.empty():
+        next_url = await queue.get()
+        await play(ctx, next_url)
+    else:
+        # 큐가 비어있으면 음성 채널에서 퇴장
+        await ctx.voice_client.disconnect()
+        print("음성 채널에서 퇴장")
 
 @bot.command(aliases=['일시정지'])
 async def pause(ctx):
