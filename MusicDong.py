@@ -109,6 +109,14 @@ async def play(ctx, url):
     else:
         await ctx.send("음성 채널에 들어가 있지 않아요!")
 
-
+@bot.command(aliases=['정지'])
+async def stop(ctx):
+    # 봇이 음성 채널에 연결되어 있고 현재 재생 중이라면
+    if ctx.voice_client and ctx.voice_client.is_playing():
+        # 오디오 재생 중지
+        ctx.voice_client.stop()
+        await ctx.send("노래요정이 재생을 중지했어요!")
+    else:
+        await ctx.send("현재 재생 중인 음악이 없어요!")
 
 bot.run(TOKEN)
