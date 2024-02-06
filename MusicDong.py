@@ -1,14 +1,18 @@
+import asyncio
 import discord
 import yt_dlp
 import discord.opus
 import os
 from dotenv import load_dotenv
 
-# .env 파일로부터 환경변수 로드
+# .env 파일로부터 환경 변수 로드
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
 from discord.ext import commands
+
+# 큐 생성
+queue = asyncio.Queue()
 
 # Opus 로딩 상세 출력
 print("Loading Opus...")
@@ -99,15 +103,63 @@ async def play(ctx, url):
                 'options': '-vn -loglevel debug'  # 로그 수준을 debug로 설정
             }
 
-            # 오디오 재생
-            vc.play(discord.FFmpegPCMAudio(audio_url, **ffmpeg_options), after=lambda e: print('done', e))
+            # 현재 재생 중인 노래가 없으면 바로 재생
+            if not vc.is_playing():
+                # 오디오 재생
+                vc.play(discord.FFmpegPCMAudio(audio_url, **ffmpeg_options), after=lambda e: print('done', e))
 
-            # 재생 중임을 나타내는 메시지 전송
-            await ctx.send(f"노래요정이 `{url}`을(를) 재생 중이에요!")
+                # YouTube 제목 가져오기
+                with yt_dlp.YoutubeDL() as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    title = info.get('title', 'Unknown Title')
+
+                # 재생 중임을 나타내는 메시지 전송
+                await ctx.send(f"노래요정이 `{title}`을(를) 재생 중이에요!")
+
+                # 노래가 끝나면 다음 노래를 재생
+                while vc.is_playing():
+                    await asyncio.sleep(1)
+                await play_next(ctx)
+
+            else:
+                # 현재 재생 중이던 노래가 있으면 큐에 추가
+                await queue.put(url)
+                await ctx.send("다음 노래를 예약~!")
         else:
             await ctx.send("오디오 URL을 찾을 수 없어요!")
     else:
         await ctx.send("음성 채널에 들어가 있지 않아요!")
+
+async def play_next(ctx):
+    # 큐에서 다음 노래 URL 가져오기
+    if not queue.empty():
+        next_url = await queue.get()
+        await play(ctx, next_url)
+    else:
+        # 큐가 비어있으면 음성 채널에서 퇴장
+        await ctx.voice_client.disconnect()
+        print("음성 채널에서 퇴장")
+
+@bot.command(aliases=['일시정지'])
+async def pause(ctx):
+    # 봇이 음성 채널에 연결되어 있고 현재 재생 중이라면
+    if ctx.voice_client and ctx.voice_client.is_playing():
+        # 오디오 일시정지
+        ctx.voice_client.pause()
+        await ctx.send("노래요정이 잠깐 쉬고 있어요. 다시 재생하려면 `!다시재생` 명령어를 사용하세요.")
+    else:
+        await ctx.send("현재 재생 중인 음악이 없어요!")
+
+@bot.command(aliases=['다시재생'])
+async def resume(ctx):
+    # 봇이 음성 채널에 연결되어 있고 현재 일시정지 중이라면
+    if ctx.voice_client and ctx.voice_client.is_paused():
+        # 오디오 다시재생
+        ctx.voice_client.resume()
+        await ctx.send("노래요정이 다시 노래 부르러 왔어요!")
+    else:
+        await ctx.send("현재 일시정지된 음악이 없어요. 먼저 `!일시정지` 명령어로 음악을 일시정지하세요.")
+
 
 @bot.command(aliases=['정지'])
 async def stop(ctx):
