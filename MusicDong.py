@@ -33,6 +33,22 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 async def on_ready():
     print('{0.user} 봇을 실행합니다.'.format(bot))
 
+@bot.command()
+async def 도움말(ctx):
+    help_text = """
+    ```
+    노래요정 봇 사용 방법:
+    - `!입장`: 노래요정이 음성 채널에 입장~
+    - `!퇴장`: 노래요정이 음성 채널에서 퇴장~!
+    - `!재생 [검색어]`: 검색어로 유튜브에서 노래를 검색하여 재생해요!
+    - `!재생 [링크]`: 링크로 유튜브에서 노래를 검색하여 재생해요!!
+    - `!정지`: 현재 재생 중인 노래를 중지해!!
+    - `!도움말`: 봇의 명령어 목록을 보여줍니다.
+    !! 곡을 재생중에 다른 곡을 재생하면 자동으로 예약돼요!!!!!
+    ```
+    """
+    await ctx.send(help_text)
+
 @bot.command(aliases=['입장'])
 async def join(ctx):
     if ctx.author.voice and ctx.author.voice.channel:
