@@ -33,6 +33,22 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 async def on_ready():
     print('{0.user} 봇을 실행합니다.'.format(bot))
 
+@bot.command()
+async def 도움말(ctx):
+    help_text = """
+    ```
+    노래요정 봇 사용 방법:
+    - `!입장`: 노래요정이 음성 채널에 입장~
+    - `!퇴장`: 노래요정이 음성 채널에서 퇴장~!
+    - `!재생 [검색어]`: 검색어로 유튜브에서 노래를 검색하여 재생해요!
+    - `!재생 [링크]`: 링크로 유튜브에서 노래를 검색하여 재생해요!!
+    - `!정지`: 현재 재생 중인 노래를 중지해!!
+    - `!도움말`: 봇의 명령어 목록을 보여줍니다.
+    !! 곡을 재생중에 다른 곡을 재생하면 자동으로 예약돼요!!!!!
+    ```
+    """
+    await ctx.send(help_text)
+
 @bot.command(aliases=['입장'])
 async def join(ctx):
     if ctx.author.voice and ctx.author.voice.channel:
@@ -82,7 +98,7 @@ async def extract_audio_url(url):
             return None
 
 @bot.command(aliases=['재생'])
-async def play(ctx, url):
+async def play(ctx, query):
     # 사용자가 음성 채널에 있는지 확인
     if ctx.author.voice and ctx.author.voice.channel:
         channel = ctx.author.voice.channel
@@ -93,6 +109,39 @@ async def play(ctx, url):
         else:
             # 봇이 연결되어 있지 않다면 새로 연결
             vc = await channel.connect()
+
+        # 입력이 URL인지 제목인지 확인
+        if 'http' in query:  # URL인 경우
+            url = query
+        else:  # 노래 제목인 경우
+            # YouTube에서 검색하여 첫 번째 결과의 URL 가져오기
+            search_query = query
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'extract_flat': 'in_playlist',
+                'force_generic_extractor': True,
+                'quiet': True,
+                'default_search': 'ytsearch',
+            }
+
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                search_results = ydl.extract_info(search_query, download=False)
+                videos = search_results.get('entries')
+
+            # 검색 결과가 있을 경우
+            if videos:
+                # 검색 결과 중 첫 번째 동영상 선택
+                selected_video = videos[0]
+                # 선택된 노래의 URL 추출
+                url = selected_video['url']
+            else:
+                await ctx.send("검색 결과가 없습니다.")
+                return
 
         # 오디오 URL 추출
         audio_url = await extract_audio_url(url)
@@ -130,6 +179,7 @@ async def play(ctx, url):
     else:
         await ctx.send("음성 채널에 들어가 있지 않아요!")
 
+
 async def play_next(ctx):
     # 큐에서 다음 노래 URL 가져오기
     if not queue.empty():
@@ -140,25 +190,25 @@ async def play_next(ctx):
         await ctx.voice_client.disconnect()
         print("음성 채널에서 퇴장")
 
-@bot.command(aliases=['일시정지'])
-async def pause(ctx):
-    # 봇이 음성 채널에 연결되어 있고 현재 재생 중이라면
-    if ctx.voice_client and ctx.voice_client.is_playing():
-        # 오디오 일시정지
-        ctx.voice_client.pause()
-        await ctx.send("노래요정이 잠깐 쉬고 있어요. 다시 재생하려면 `!다시재생` 명령어를 사용하세요.")
-    else:
-        await ctx.send("현재 재생 중인 음악이 없어요!")
+# @bot.command(aliases=['일시정지'])
+# async def pause(ctx):
+#     # 봇이 음성 채널에 연결되어 있고 현재 재생 중이라면
+#     if ctx.voice_client and ctx.voice_client.is_playing():
+#         # 오디오 일시정지
+#         ctx.voice_client.pause()
+#         await ctx.send("노래요정이 잠깐 쉬고 있어요. 다시 재생하려면 `!다시재생` 명령어를 사용하세요.")
+#     else:
+#         await ctx.send("현재 재생 중인 음악이 없어요!")
 
-@bot.command(aliases=['다시재생'])
-async def resume(ctx):
-    # 봇이 음성 채널에 연결되어 있고 현재 일시정지 중이라면
-    if ctx.voice_client and ctx.voice_client.is_paused():
-        # 오디오 다시재생
-        ctx.voice_client.resume()
-        await ctx.send("노래요정이 다시 노래 부르러 왔어요!")
-    else:
-        await ctx.send("현재 일시정지된 음악이 없어요. 먼저 `!일시정지` 명령어로 음악을 일시정지하세요.")
+# @bot.command(aliases=['다시재생'])
+# async def resume(ctx):
+#     # 봇이 음성 채널에 연결되어 있고 현재 일시정지 중이라면
+#     if ctx.voice_client and ctx.voice_client.is_paused():
+#         # 오디오 다시재생
+#         ctx.voice_client.resume()
+#         await ctx.send("노래요정이 다시 노래 부르러 왔어요!")
+#     else:
+#         await ctx.send("현재 일시정지된 음악이 없어요. 먼저 `!일시정지` 명령어로 음악을 일시정지하세요.")
 
 
 @bot.command(aliases=['정지'])
