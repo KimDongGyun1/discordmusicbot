@@ -140,25 +140,25 @@ async def play_next(ctx):
         await ctx.voice_client.disconnect()
         print("음성 채널에서 퇴장")
 
-@bot.command(aliases=['일시정지'])
-async def pause(ctx):
-    # 봇이 음성 채널에 연결되어 있고 현재 재생 중이라면
-    if ctx.voice_client and ctx.voice_client.is_playing():
-        # 오디오 일시정지
-        ctx.voice_client.pause()
-        await ctx.send("노래요정이 잠깐 쉬고 있어요. 다시 재생하려면 `!다시재생` 명령어를 사용하세요.")
-    else:
-        await ctx.send("현재 재생 중인 음악이 없어요!")
+# @bot.command(aliases=['일시정지'])
+# async def pause(ctx):
+#     # 봇이 음성 채널에 연결되어 있고 현재 재생 중이라면
+#     if ctx.voice_client and ctx.voice_client.is_playing():
+#         # 오디오 일시정지
+#         ctx.voice_client.pause()
+#         await ctx.send("노래요정이 잠깐 쉬고 있어요. 다시 재생하려면 `!다시재생` 명령어를 사용하세요.")
+#     else:
+#         await ctx.send("현재 재생 중인 음악이 없어요!")
 
-@bot.command(aliases=['다시재생'])
-async def resume(ctx):
-    # 봇이 음성 채널에 연결되어 있고 현재 일시정지 중이라면
-    if ctx.voice_client and ctx.voice_client.is_paused():
-        # 오디오 다시재생
-        ctx.voice_client.resume()
-        await ctx.send("노래요정이 다시 노래 부르러 왔어요!")
-    else:
-        await ctx.send("현재 일시정지된 음악이 없어요. 먼저 `!일시정지` 명령어로 음악을 일시정지하세요.")
+# @bot.command(aliases=['다시재생'])
+# async def resume(ctx):
+#     # 봇이 음성 채널에 연결되어 있고 현재 일시정지 중이라면
+#     if ctx.voice_client and ctx.voice_client.is_paused():
+#         # 오디오 다시재생
+#         ctx.voice_client.resume()
+#         await ctx.send("노래요정이 다시 노래 부르러 왔어요!")
+#     else:
+#         await ctx.send("현재 일시정지된 음악이 없어요. 먼저 `!일시정지` 명령어로 음악을 일시정지하세요.")
 
 
 @bot.command(aliases=['정지'])
