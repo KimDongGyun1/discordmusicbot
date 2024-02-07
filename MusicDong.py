@@ -29,6 +29,26 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+async def search_youtube(query):
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+        'quiet': True,  # 출력을 조용하게 유지
+        'force_generic_extractor': True,  # 제네릭 추출기 강제 사용
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        try:
+            info = ydl.extract_info(f'ytsearch:{query}', download=False)['entries'][0]
+            return info['url']
+        except Exception as e:
+            print(f"유튜브에서 검색하는 동안 에러 발생: {e}")
+            return None
+
 @bot.event
 async def on_ready():
     print('{0.user} 봇을 실행합니다.'.format(bot))
@@ -82,7 +102,7 @@ async def extract_audio_url(url):
             return None
 
 @bot.command(aliases=['재생'])
-async def play(ctx, url):
+async def play(ctx, *, query):
     # 사용자가 음성 채널에 있는지 확인
     if ctx.author.voice and ctx.author.voice.channel:
         channel = ctx.author.voice.channel
@@ -94,8 +114,8 @@ async def play(ctx, url):
             # 봇이 연결되어 있지 않다면 새로 연결
             vc = await channel.connect()
 
-        # 오디오 URL 추출
-        audio_url = await extract_audio_url(url)
+        # 검색된 유튜브 동영상 URL 가져오기
+        audio_url = await search_youtube(query)
         if audio_url:
             # 오디오 재생을 위한 FFmpeg 옵션
             ffmpeg_options = {
@@ -110,7 +130,7 @@ async def play(ctx, url):
 
                 # YouTube 제목 가져오기
                 with yt_dlp.YoutubeDL() as ydl:
-                    info = ydl.extract_info(url, download=False)
+                    info = ydl.extract_info(f'ytsearch:{query}', download=False)['entries'][0]
                     title = info.get('title', 'Unknown Title')
 
                 # 재생 중임을 나타내는 메시지 전송
@@ -123,10 +143,10 @@ async def play(ctx, url):
 
             else:
                 # 현재 재생 중이던 노래가 있으면 큐에 추가
-                await queue.put(url)
+                await queue.put(audio_url)
                 await ctx.send("다음 노래를 예약~!")
         else:
-            await ctx.send("오디오 URL을 찾을 수 없어요!")
+            await ctx.send("검색된 동영상을 찾을 수 없어요!")
     else:
         await ctx.send("음성 채널에 들어가 있지 않아요!")
 
