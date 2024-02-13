@@ -99,7 +99,7 @@ async def extract_audio_url(url):
             return None
 
 @bot.command(aliases=['재생'])
-async def play(ctx, query):
+async def play(ctx, *args):
     # 사용자가 음성 채널에 있는지 확인
     if ctx.author.voice and ctx.author.voice.channel:
         channel = ctx.author.voice.channel
@@ -112,11 +112,15 @@ async def play(ctx, query):
             vc = await channel.connect()
 
         # 입력이 URL인지 제목인지 확인
+        query = ' '.join(args)
         if 'http' in query:  # URL인 경우
             url = query
         else:  # 노래 제목인 경우
+            # 가수와 노래 제목으로 분리
+            artist, title = query.split('+', 1) if '+' in query else (None, query)
+
             # YouTube에서 검색하여 첫 번째 결과의 URL 가져오기
-            search_query = query
+            search_query = f"{artist} {title}" if artist else title
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'postprocessors': [{
